@@ -134,6 +134,7 @@ struct start_opts
   char    *start_breakpoint;
   Sint32   start_disks_count;
   char     start_disks[4][1024];
+  Sint32   start_overclock;
 };
 
 static char *machtypes[] = { "oric1",
@@ -579,6 +580,7 @@ static void usage( int ret )
 #endif
           "  -b / --debug       = Start oricutron in the debugger\n"
           "  -r / --breakpoint  = Set a breakpoint\n"
+          "  -o / --overclock N = Start overclocked\n"
           "\n"
           "  --turbotape on|off = Enable or disable turbotape\n"
           "  --lightpen on|off  = Enable or disable lightpen\n"
@@ -683,6 +685,7 @@ SDL_bool init( struct machine *oric, int argc, char *argv[] )
   sto->start_syms_count = 0;
   sto->start_snapshot[0] = 0;
   sto->start_breakpoint = NULL;
+  sto->start_overclock = 0;
   oric->ch376_activated = SDL_FALSE;
   fullscreen          = SDL_FALSE;
 #ifdef WIN32
@@ -743,6 +746,7 @@ SDL_bool init( struct machine *oric, int argc, char *argv[] )
           if( strcasecmp( tmp, "drive"      ) == 0 ) { opt_type = 'k'; break; }
           if( strcasecmp( tmp, "symbols"    ) == 0 ) { opt_type = 's'; break; }
           if( strcasecmp( tmp, "breakpoint" ) == 0 ) { opt_type = 'r'; break; }
+          if( strcasecmp( tmp, "overclock"  ) == 0 ) { opt_type = 'o'; break; }
 #ifdef __OPENGL_AVAILABLE__
           if( strcasecmp( tmp, "rendermode" ) == 0 ) { opt_type = 'R'; break; }
 #endif
@@ -1078,6 +1082,24 @@ SDL_bool init( struct machine *oric, int argc, char *argv[] )
           sto->start_debug = SDL_TRUE;
           break;
 
+        case 'o':
+          if( opt_arg )
+          {
+            sto->start_overclock = atoi(opt_arg);
+            if (sto->start_overclock > 6) {
+                error_printf( "Overclock mode must be in range (0..6)" );
+                free( sto );
+                exit( EXIT_FAILURE );
+            }
+          }
+          else
+          {
+            error_printf( "Overclock mode expected" );
+            free( sto );
+            exit( EXIT_FAILURE );
+          }
+          break;
+
         case 'r': // Breakpoint
           if( opt_arg )
           {
@@ -1189,7 +1211,7 @@ SDL_bool init( struct machine *oric, int argc, char *argv[] )
   for( i=0; i<8; i++ ) lastframetimes[i] = 0;
   frametimeave = 0;
 
-  setoverclock( oric, NULL, 0 );
+  setoverclock( oric, NULL, sto->start_overclock );
   if( !init_gui( oric, sto->start_rendermode ) ) { free( sto ); return SDL_FALSE; }
   if( !init_filerequester( oric ) ) { free( sto ); return SDL_FALSE; }
   if( !init_msgbox( oric ) ) { free( sto ); return SDL_FALSE; }
